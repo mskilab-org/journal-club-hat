@@ -121,16 +121,11 @@
     align-items: center;
     gap: 12px;
   }
-  .wheel-wrap {
-    position: relative;
-    width: 300px;
-    height: 300px;
-  }
-  #wheel-canvas { width: 300px; height: 300px; display: block; }
+  .wheel-wrap { position: relative; /* w/h set by JS */ }
+  #wheel-canvas { display: block; }
   .wheel-pointer {
     position: absolute;
-    top: -8px;
-    left: 50%;
+    top: -8px; left: 50%;
     transform: translateX(-50%);
     width: 0; height: 0;
     border-left: 11px solid transparent;
@@ -150,13 +145,18 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
     text-transform: uppercase; color: var(--muted);
-    z-index: 3;
-    cursor: pointer;
-    user-select: none;
+    z-index: 3; cursor: pointer; user-select: none;
     transition: background 0.15s;
   }
   .wheel-hub:hover { background: var(--bg); }
   #wheel-result { font-size: 13px; color: var(--hint); min-height: 18px; text-align: center; }
+  .wheel-size-row {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; max-width: 360px;
+  }
+  .wheel-size-row label { font-size: 12px; color: var(--hint); white-space: nowrap; }
+  .wheel-size-row input[type=range] { flex: 1; accent-color: var(--accent); }
+  .wheel-size-val { font-size: 12px; color: var(--hint); min-width: 36px; text-align: right; }
 
   /* draw button */
   #draw-btn {
@@ -348,6 +348,12 @@
         <div class="wheel-hub" onclick="draw()">Spin</div>
       </div>
       <div id="wheel-result"></div>
+      <div class="wheel-size-row">
+        <label for="wheel-size-slider">Size</label>
+        <input type="range" id="wheel-size-slider" min="100" max="600" step="10" value="300"
+               oninput="onWheelResize(+this.value)" />
+        <span class="wheel-size-val" id="wheel-size-val">300px</span>
+      </div>
     </div>
   </div>
 
@@ -482,12 +488,14 @@ let state = {
   history:        [],
   collapsed:      {},
   view:           'text',
+  wheelSize:      300,
 };
 
 let weightModalTarget = null;
 let isAnimating = false;
 let wheelAngle  = 0;
 let wheelAnim   = null;
+let frozenSlices = null;  // slice layout frozen at spin time, held until next spin
 
 // ---- persistence ----
 function saveState() {
@@ -506,6 +514,7 @@ function loadState() {
       state.drawnThisRound = state.drawnThisRound || [];
       state.collapsed      = state.collapsed      || {};
       state.view           = state.view           || 'text';
+      state.wheelSize      = state.wheelSize      || 300;
     }
     if (!state.names || state.names.length === 0) {
       state.names   = ROSTER.map(r => r.name);
@@ -518,6 +527,35 @@ function loadState() {
 }
 
 // ---- view ----
+function applyWheelSize(size) {
+  const DPR    = window.devicePixelRatio || 1;
+  const canvas = document.getElementById('wheel-canvas');
+  const wrap   = document.querySelector('.wheel-wrap');
+  canvas.width  = size * DPR;
+  canvas.height = size * DPR;
+  canvas.style.width  = size + 'px';
+  canvas.style.height = size + 'px';
+  wrap.style.width  = size + 'px';
+  wrap.style.height = size + 'px';
+  // Scale hub overlay to match canvas HUB_R (max(24, size*0.055) * 2)
+  const hubPx = Math.max(24, size * 0.055) * 2;
+  const hub = document.querySelector('.wheel-hub');
+  if (hub) {
+    hub.style.width  = hubPx + 'px';
+    hub.style.height = hubPx + 'px';
+    hub.style.fontSize = Math.max(8, hubPx * 0.22) + 'px';
+  }
+  document.getElementById('wheel-size-slider').value = size;
+  document.getElementById('wheel-size-val').textContent = size + 'px';
+}
+
+function onWheelResize(size) {
+  state.wheelSize = size;
+  applyWheelSize(size);
+  paintWheel(wheelAngle);
+  saveState();
+}
+
 function setView(v) {
   state.view = v;
   saveState();
@@ -527,7 +565,10 @@ function setView(v) {
   document.getElementById('btn-view-wheel').classList.toggle('active', v === 'wheel');
   const btn = document.getElementById('draw-btn');
   btn.textContent = v === 'wheel' ? 'Spin the wheel' : 'Draw a name';
-  if (v === 'wheel') requestAnimationFrame(() => paintWheel(wheelAngle));
+  if (v === 'wheel') {
+    applyWheelSize(state.wheelSize || 300);
+    requestAnimationFrame(() => paintWheel(wheelAngle));
+  }
 }
 
 // ---- pool ----
@@ -561,28 +602,31 @@ function paintWheel(rotation) {
   const canvas = document.getElementById('wheel-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const cx = W / 2, cy = H / 2, R = W / 2 - 8;
-  const pool = getPool();
+  const W  = canvas.width;
+  const H  = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const HUB_R  = W * 0.055;   // center hub radius, scales with wheel
+  const MARGIN = Math.max(6, W * 0.018);
+  const R      = W / 2 - MARGIN;
+  const pool   = frozenSlices ? null : getPool();
 
   ctx.clearRect(0, 0, W, H);
 
-  if (pool.length === 0) {
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#888';
-    ctx.font = 'bold 32px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+  if (!frozenSlices && pool.length === 0) {
+    ctx.fillStyle = '#888';
+    ctx.font = `bold ${Math.round(W * 0.07)}px Georgia, serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('No names', cx, cy);
     return;
   }
 
-  const slices = getSlices(pool);
+  const slices = frozenSlices || getSlices(pool);
 
-  slices.forEach((sl, idx) => {
+  // --- draw slices ---
+  slices.forEach(sl => {
     const sa = sl.start + rotation - Math.PI / 2;
     const ea = sa + sl.sweep;
 
-    // slice fill
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, sa, ea);
@@ -590,54 +634,109 @@ function paintWheel(rotation) {
     ctx.fillStyle = sl.color[0];
     ctx.fill();
 
-    // divider line
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, sa, ea);
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = Math.max(1, W / 400);
     ctx.stroke();
-
-    // label
-    if (sl.sweep > 0.08) {
-      const midA   = sa + sl.sweep / 2;
-      const labelR = R * 0.65;
-      const lx = cx + Math.cos(midA) * labelR;
-      const ly = cy + Math.sin(midA) * labelR;
-
-      ctx.save();
-      ctx.translate(lx, ly);
-      ctx.rotate(midA + Math.PI / 2);
-
-      // clip long names to available arc
-      const arcLen     = sl.sweep * labelR;
-      const charWidth  = Math.max(9, Math.min(18, arcLen / 7));
-      const maxChars   = Math.max(3, Math.floor(arcLen / charWidth));
-      const label      = sl.name.length > maxChars
-        ? sl.name.slice(0, maxChars - 1) + '…'
-        : sl.name;
-
-      const fs = Math.max(11, Math.min(20, Math.floor(sl.sweep * R * 0.36)));
-      ctx.font      = `${fs}px Georgia, serif`;
-      ctx.fillStyle = sl.color[1];
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, 0, 0);
-      ctx.restore();
-    }
   });
 
-  // outer ring
+  // Outer ring
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(0,0,0,0.20)';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = Math.max(2, W / 150);
   ctx.stroke();
 
-  // center hub background (CSS overlay handles the text)
+  // --- draw labels ---
+  const DPR = window.devicePixelRatio || 1;
+  const screenW = W / DPR;
+
+  // Font scales up to a cap at 300px wheel width, then freezes.
+  // Above 300px the chord just gets wider → more text visible, not bigger font.
+  const FS_SCREEN_CAP = screenW >= 300 ? Math.min(screenW * (18 / 300), 18) : screenW * (18 / 300);
+  const FS_SCREEN     = Math.min(FS_SCREEN_CAP, 18);
+  const FS            = FS_SCREEN * DPR;
+  const LINE_H        = FS * 1.3;
+  const RIM_PAD       = Math.max(4, screenW * 0.015) * DPR;
+
+  function fitText(str, maxW) {
+    if (ctx.measureText(str).width <= maxW) return str;
+    let s = str;
+    while (s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  // Split into 2 parts at best word boundary, or hyphen-split single words.
+  // Does NOT guarantee parts fit in chord — caller must fitText each part.
+  function splitTwo(name, chord) {
+    const words = name.split(' ');
+    if (words.length === 1) {
+      // Walk back from end until prefix+hyphen fits chord
+      let i = name.length;
+      while (i > 1 && ctx.measureText(name.slice(0, i) + '-').width > chord) i--;
+      // row1 is guaranteed to fit; row2 may still need fitText
+      return [name.slice(0, i) + '-', name.slice(i)];
+    }
+    // Pick word boundary that best balances both halves
+    let best = null, bestDiff = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const a = words.slice(0, i).join(' ');
+      const b = words.slice(i).join(' ');
+      const d = Math.abs(ctx.measureText(a).width - ctx.measureText(b).width);
+      if (d < bestDiff) { bestDiff = d; best = [a, b]; }
+    }
+    return best;
+  }
+
+  ctx.font = `${Math.round(FS)}px Georgia, serif`;
+
+  slices.forEach(sl => {
+    if (sl.sweep < 0.04) return;
+
+    const midA     = sl.start + rotation - Math.PI / 2 + sl.sweep / 2;
+    const anchorR  = R - RIM_PAD - FS * 0.5;
+    const SIDE_PAD = Math.max(3, screenW * 0.006) * DPR;
+    const chord    = Math.max(0, 2 * anchorR * Math.sin(sl.sweep / 2) - SIDE_PAD * 2);
+    if (chord < FS * 0.8) return;   // slice too thin to render anything legible
+
+    const radialAvail = anchorR - HUB_R - W * 0.03;
+    const canWrap     = radialAvail >= LINE_H * 1.8;
+
+    let lines;
+    if (ctx.measureText(sl.name).width <= chord) {
+      lines = [sl.name];
+    } else if (canWrap) {
+      const [part1, part2] = splitTwo(sl.name, chord);
+      // Always clamp both rows — row1 from a hyphen split is usually already within chord,
+      // but fitText is a no-op if it already fits, and a safety net if chord is very tight.
+      lines = [fitText(part1, chord), fitText(part2, chord)];
+    } else {
+      lines = [fitText(sl.name, chord)];
+    }
+
+    const centerOffset = (lines.length - 1) * LINE_H / 2;
+
+    ctx.save();
+    ctx.translate(
+      cx + Math.cos(midA) * (anchorR - centerOffset),
+      cy + Math.sin(midA) * (anchorR - centerOffset)
+    );
+    ctx.rotate(midA + Math.PI / 2);
+    ctx.fillStyle    = sl.color[1];
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    lines.forEach((line, i) => {
+      ctx.fillText(line, 0, (i - (lines.length - 1) / 2) * LINE_H);
+    });
+    ctx.restore();
+  });
+
+  // Center hub
   ctx.beginPath();
-  ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+  ctx.arc(cx, cy, HUB_R, 0, Math.PI * 2);
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   ctx.fillStyle = isDark ? '#252523' : '#ffffff';
   ctx.fill();
@@ -661,10 +760,11 @@ function spinTo(chosenName, pool, onDone) {
 
   const startAngle = wheelAngle;
   const delta      = targetAbs - startAngle;
-  const duration   = 3000 + Math.random() * 1000;
+  const duration   = 5500 + Math.random() * 1500;
   const t0         = performance.now();
 
-  function ease(t) { return 1 - Math.pow(1 - t, 3.5); }
+  // Lower exponent = more time spent at speed before crawling to a stop
+  function ease(t) { return 1 - Math.pow(1 - t, 2.2); }
 
   if (wheelAnim) cancelAnimationFrame(wheelAnim);
   function frame(now) {
@@ -680,6 +780,7 @@ function spinTo(chosenName, pool, onDone) {
 // ---- draw ----
 function draw() {
   if (isAnimating) return;
+  frozenSlices = null;   // release previous freeze so wheel shows live pool briefly
   let pool = getPool();
   if (pool.length === 0 && state.noReplace) {
     state.drawnThisRound = [];
@@ -700,6 +801,8 @@ function draw() {
 
   if (state.view === 'wheel') {
     document.getElementById('wheel-result').textContent = '';
+    // Freeze the slice layout now — it stays locked until the next spin starts
+    frozenSlices = getSlices(pool);
     spinTo(chosen, pool, () => {
       document.getElementById('wheel-result').textContent = chosen + '  ·  ' + roundStr;
       finish(chosen);
@@ -795,6 +898,7 @@ function applyBatch() {
 // ---- history ----
 function clearHistory() {
   state.history = []; state.drawnThisRound = [];
+  frozenSlices = null;
   document.getElementById('result-name').textContent = '—';
   document.getElementById('result-meta').textContent = 'press draw to begin';
   document.getElementById('wheel-result').textContent = '';
@@ -901,6 +1005,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 
 // ---- init ----
 loadState();
+applyWheelSize(state.wheelSize || 300);
 setView(state.view || 'text');
 updateUI();
 </script>
