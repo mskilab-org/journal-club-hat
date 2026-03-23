@@ -654,11 +654,11 @@ function paintWheel(rotation) {
   const DPR = window.devicePixelRatio || 1;
   const screenW = W / DPR;
 
-  // Font scales up to a cap at 300px wheel width, then freezes.
-  // Above 300px the chord just gets wider → more text visible, not bigger font.
-  const FS_SCREEN_CAP = screenW >= 300 ? Math.min(screenW * (18 / 300), 18) : screenW * (18 / 300);
-  const FS_SCREEN     = Math.min(FS_SCREEN_CAP, 18);
-  const FS            = FS_SCREEN * DPR;
+  // Font scales up to a cap at 450px wheel width, then freezes.
+  // Above 450px the chord just gets wider → more text visible, not bigger font.
+  const FS_CAP     = 18 * 0.9;   // 16.2px max
+  const FS_SCREEN  = Math.min(screenW * (FS_CAP / 450), FS_CAP);
+  const FS         = FS_SCREEN * DPR;
   const LINE_H        = FS * 1.3;
   const RIM_PAD       = Math.max(4, screenW * 0.015) * DPR;
 
