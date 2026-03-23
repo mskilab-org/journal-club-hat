@@ -1,6 +1,8 @@
-<html lang="en"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Journal Club Draw</title>
 <style>
   :root {
@@ -47,15 +49,9 @@
     padding: 2rem 1rem 4rem;
   }
 
-  .page {
-    max-width: 540px;
-    margin: 0 auto;
-  }
+  .page { max-width: 540px; margin: 0 auto; }
 
-  header {
-    margin-bottom: 2rem;
-  }
-
+  header { margin-bottom: 1.5rem; }
   header h1 {
     font-family: var(--font);
     font-size: 28px;
@@ -64,13 +60,29 @@
     color: var(--text);
     margin-bottom: 4px;
   }
+  header p { font-size: 14px; color: var(--muted); }
 
-  header p {
-    font-size: 14px;
-    color: var(--muted);
+  .view-toggle {
+    display: inline-flex;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 1rem;
   }
+  .view-btn {
+    padding: 6px 18px;
+    font-size: 13px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    transition: background 0.15s, color 0.15s;
+  }
+  .view-btn + .view-btn { border-left: 0.5px solid var(--border-md); }
+  .view-btn.active { background: var(--accent); color: var(--accent-fg); }
 
-  /* ---- result card ---- */
+  /* text result */
   .result-area {
     background: var(--surface);
     border: 0.5px solid var(--border);
@@ -85,7 +97,6 @@
     justify-content: center;
     gap: 6px;
   }
-
   #result-name {
     font-family: var(--font);
     font-size: 42px;
@@ -95,16 +106,59 @@
     line-height: 1.1;
     transition: opacity 0.1s;
   }
+  #result-name.spinning { opacity: 0.4; }
+  #result-meta { font-size: 12px; color: var(--hint); }
 
-  #result-name.spinning { opacity: 0.5; }
-
-  #result-meta {
-    font-size: 12px;
-    color: var(--hint);
-    font-family: var(--font-ui);
+  /* wheel */
+  .wheel-area {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
   }
+  .wheel-wrap {
+    position: relative;
+    width: 300px;
+    height: 300px;
+  }
+  #wheel-canvas { width: 300px; height: 300px; display: block; }
+  .wheel-pointer {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-top: 24px solid var(--accent);
+    z-index: 2;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.20));
+  }
+  .wheel-hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 3px solid var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted);
+    z-index: 3;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .wheel-hub:hover { background: var(--bg); }
+  #wheel-result { font-size: 13px; color: var(--hint); min-height: 18px; text-align: center; }
 
-  /* ---- draw button ---- */
+  /* draw button */
   #draw-btn {
     width: 100%;
     padding: 14px;
@@ -123,7 +177,6 @@
   #draw-btn:active { transform: scale(0.985); }
   #draw-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 
-  /* ---- cards ---- */
   .card {
     background: var(--surface);
     border: 0.5px solid var(--border);
@@ -131,308 +184,136 @@
     padding: 1rem 1.25rem;
     margin-bottom: 1rem;
   }
-
   .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    cursor: pointer;
-    user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; cursor: pointer; user-select: none;
   }
-
   .section-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
   }
-
-  .chevron {
-    font-size: 12px;
-    color: var(--hint);
-    transition: transform 0.2s;
-  }
+  .chevron { font-size: 12px; color: var(--hint); transition: transform 0.2s; }
   .chevron.open { transform: rotate(180deg); }
-
   .collapsible { overflow: hidden; transition: max-height 0.25s ease; }
   .collapsible.closed { max-height: 0 !important; }
 
-  /* ---- name pills ---- */
-  .name-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-
+  .name-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .name-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    border: 0.5px solid var(--border-md);
-    border-radius: 999px;
-    font-size: 13px;
-    background: var(--surface);
-    overflow: hidden;
-    transition: border-color 0.15s;
+    display: inline-flex; align-items: center;
+    border: 0.5px solid var(--border-md); border-radius: 999px;
+    font-size: 13px; background: var(--surface); overflow: hidden;
   }
-  .name-pill.drawn {
-    background: var(--pill-drawn-bg);
-    border-color: var(--border);
-  }
+  .name-pill.drawn { background: var(--pill-drawn-bg); border-color: var(--border); }
   .name-pill.drawn .pill-name { text-decoration: line-through; color: var(--pill-drawn-text); }
-
-  .pill-name {
-    padding: 5px 10px 5px 12px;
-    color: var(--text);
-    white-space: nowrap;
-  }
-
+  .pill-name { padding: 5px 10px 5px 12px; color: var(--text); white-space: nowrap; }
   .pill-weight {
-    padding: 5px 6px;
-    font-size: 11px;
-    color: var(--muted);
-    border-left: 0.5px solid var(--border);
-    background: var(--bg);
-    cursor: pointer;
-    transition: background 0.1s, color 0.1s;
-    white-space: nowrap;
+    padding: 5px 6px; font-size: 11px; color: var(--muted);
+    border-left: 0.5px solid var(--border); background: var(--bg);
+    cursor: pointer; transition: background 0.1s, color 0.1s; white-space: nowrap;
   }
-  .pill-weight:hover { background: var(--border); color: var(--text); }
+  .pill-weight:hover { background: var(--border-md); color: var(--text); }
   .pill-weight.high { color: #c05a1a; }
   .pill-weight.low  { color: var(--hint); }
-
   .pill-remove {
-    background: none;
-    border: none;
-    border-left: 0.5px solid var(--border);
-    cursor: pointer;
-    color: var(--hint);
-    font-size: 13px;
-    padding: 5px 8px;
-    line-height: 1;
+    background: none; border: none; border-left: 0.5px solid var(--border);
+    cursor: pointer; color: var(--hint); font-size: 13px; padding: 5px 8px;
+    line-height: 1; display: flex; align-items: center;
     transition: color 0.1s, background 0.1s;
-    display: flex;
-    align-items: center;
   }
   .pill-remove:hover { color: var(--text); background: var(--bg); }
 
-  /* ---- add row ---- */
-  .add-row {
-    display: flex;
-    gap: 8px;
-  }
+  .add-row { display: flex; gap: 8px; }
   .add-row input {
-    flex: 1;
-    font-size: 14px;
-    padding: 8px 12px;
-    border: 0.5px solid var(--border-md);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-    font-family: var(--font-ui);
-    transition: border-color 0.15s;
+    flex: 1; font-size: 14px; padding: 8px 12px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); outline: none;
+    font-family: var(--font-ui); transition: border-color 0.15s;
   }
   .add-row input::placeholder { color: var(--hint); }
   .add-row input:focus { border-color: var(--accent); }
   .add-row button {
-    padding: 8px 16px;
-    font-size: 14px;
-    border: 0.5px solid var(--border-md);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    transition: background 0.1s;
-    white-space: nowrap;
+    padding: 8px 14px; font-size: 13px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-family: var(--font-ui); transition: background 0.1s; white-space: nowrap;
   }
   .add-row button:hover { background: var(--bg); }
 
-  .pool-status {
-    font-size: 12px;
-    color: var(--hint);
-    margin-top: 10px;
-    text-align: right;
-  }
+  .pool-status { font-size: 12px; color: var(--hint); margin-top: 10px; text-align: right; }
+  .weight-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 11px; color: var(--hint); }
+  .weight-legend span { display: flex; align-items: center; gap: 4px; }
 
-  /* ---- toggle ---- */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 0;
+  .export-btn {
+    width: 100%; padding: 9px; font-size: 13px;
+    border: 0.5px solid var(--border-md); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    font-family: var(--font-ui); transition: background 0.1s, color 0.1s;
+    margin-top: 10px; text-align: center;
   }
+  .export-btn:hover { background: var(--bg); color: var(--text); }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
   .toggle-row + .toggle-row { margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--border); }
   .toggle-info .tl { font-size: 14px; color: var(--text); }
   .toggle-info .td { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .toggle {
-    position: relative;
-    width: 36px;
-    height: 20px;
-    flex-shrink: 0;
-  }
+  .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
   .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
   .toggle-track {
-    position: absolute;
-    inset: 0;
-    background: var(--border-md);
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background 0.2s;
+    position: absolute; inset: 0; background: var(--border-md);
+    border-radius: 999px; cursor: pointer; transition: background 0.2s;
   }
   .toggle-track::before {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    left: 3px; top: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    content: ''; position: absolute; width: 14px; height: 14px;
+    left: 3px; top: 3px; background: white; border-radius: 50%;
+    transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
   .toggle input:checked ~ .toggle-track { background: var(--accent); }
   .toggle input:checked ~ .toggle-track::before { transform: translateX(16px); }
 
-  /* ---- weight editor modal ---- */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 0.5px solid var(--border-md);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    width: 320px;
-    max-width: 92vw;
-  }
-  .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
-  .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
-  .weight-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-  }
-  .weight-row label { font-size: 14px; }
-  .weight-row input[type=range] {
-    width: 130px;
-    accent-color: var(--accent);
-  }
-  .weight-val {
-    font-size: 13px;
-    font-weight: 500;
-    min-width: 28px;
-    text-align: right;
-    color: var(--text);
-  }
-  .modal-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
-  .modal-actions button {
-    flex: 1;
-    padding: 9px;
-    font-size: 14px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    transition: opacity 0.1s;
-  }
-  .btn-cancel { background: var(--bg); border: 0.5px solid var(--border-md); color: var(--muted); }
-  .btn-cancel:hover { color: var(--text); }
-  .btn-save { background: var(--accent); border: none; color: var(--accent-fg); font-weight: 500; }
-  .btn-save:hover { opacity: 0.85; }
-
-  /* ---- history ---- */
-  .history-list {
-    list-style: none;
-    font-size: 13px;
-    max-height: 140px;
-    overflow-y: auto;
-  }
-  .history-list li {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 4px 0;
-    border-bottom: 0.5px solid var(--border);
-  }
+  .history-list { list-style: none; font-size: 13px; max-height: 140px; overflow-y: auto; }
+  .history-list li { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; border-bottom: 0.5px solid var(--border); }
   .history-list li:last-child { border-bottom: none; }
   .h-num { font-size: 11px; color: var(--hint); min-width: 20px; }
   .h-name { color: var(--text); flex: 1; }
   .h-time { font-size: 11px; color: var(--hint); }
   .history-empty { font-size: 13px; color: var(--hint); font-style: italic; }
   .history-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
-  .text-btn {
-    background: none;
-    border: none;
-    font-size: 12px;
-    color: var(--hint);
-    cursor: pointer;
-    text-decoration: underline;
-    font-family: var(--font-ui);
-    padding: 0;
-  }
+  .text-btn { background: none; border: none; font-size: 12px; color: var(--hint); cursor: pointer; text-decoration: underline; font-family: var(--font-ui); padding: 0; }
   .text-btn:hover { color: var(--muted); }
 
-  /* ---- weight legend ---- */
-  .weight-legend {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--hint);
+  /* modals */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 100;
+    align-items: center; justify-content: center;
   }
-  .weight-legend span { display: flex; align-items: center; gap: 4px; }
-
-  /* ---- batch edit modal ---- */
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    width: 320px; max-width: 92vw;
+  }
+  .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
+  .weight-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .weight-row label { font-size: 14px; }
+  .weight-row input[type=range] { width: 130px; accent-color: var(--accent); }
+  .weight-val { font-size: 13px; font-weight: 500; min-width: 28px; text-align: right; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+  .modal-actions button { flex: 1; padding: 9px; font-size: 14px; border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-ui); }
+  .btn-cancel { background: var(--bg); border: 0.5px solid var(--border-md); color: var(--muted); }
+  .btn-cancel:hover { color: var(--text); }
+  .btn-save { background: var(--accent); border: none; color: var(--accent-fg); font-weight: 500; }
+  .btn-save:hover { opacity: 0.85; }
   .batch-textarea {
-    width: 100%;
-    min-height: 160px;
-    font-size: 14px;
-    font-family: var(--font-ui);
-    padding: 10px 12px;
-    border: 0.5px solid var(--border-md);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-    resize: vertical;
-    line-height: 1.6;
-    transition: border-color 0.15s;
+    width: 100%; min-height: 160px; font-size: 14px; font-family: var(--font-ui);
+    padding: 10px 12px; border: 0.5px solid var(--border-md); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); outline: none; resize: vertical; line-height: 1.6;
   }
   .batch-textarea:focus { border-color: var(--accent); }
   .batch-textarea::placeholder { color: var(--hint); }
   .batch-note { font-size: 12px; color: var(--hint); margin-top: 6px; }
 
-  /* ---- export button ---- */
-  .export-btn {
-    width: 100%;
-    padding: 10px;
-    font-size: 14px;
-    border: 0.5px solid var(--border-md);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    transition: background 0.1s;
-    margin-top: 8px;
-    text-align: center;
-  }
-  .export-btn:hover { background: var(--bg); }
-
-  /* scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 4px; }
@@ -442,12 +323,32 @@
 <div class="page">
   <header>
     <h1>Journal Club</h1>
-    <p id="header-sub">with replacement</p>
+    <p id="header-sub">Pick a name out of the hat</p>
   </header>
 
-  <div class="result-area">
-    <div id="result-name" class="">—</div>
-    <div id="result-meta">press draw to begin</div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="btn-view-text"  onclick="setView('text')">Text</button>
+    <button class="view-btn"        id="btn-view-wheel" onclick="setView('wheel')">Wheel</button>
+  </div>
+
+  <!-- Text view -->
+  <div id="view-text">
+    <div class="result-area">
+      <div id="result-name">—</div>
+      <div id="result-meta">press draw to begin</div>
+    </div>
+  </div>
+
+  <!-- Wheel view -->
+  <div id="view-wheel" style="display:none">
+    <div class="wheel-area">
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel-canvas" width="600" height="600"></canvas>
+        <div class="wheel-hub" onclick="draw()">Spin</div>
+      </div>
+      <div id="wheel-result"></div>
+    </div>
   </div>
 
   <button id="draw-btn" onclick="draw()">Draw a name</button>
@@ -458,20 +359,20 @@
       <span class="section-label">Members</span>
       <span class="chevron open" id="chev-members">▼</span>
     </div>
-    <div class="collapsible" id="sec-members" style="max-height: 500px;">
-      <div class="name-grid" id="name-grid"><span class="name-pill"><span class="pill-name">Andrew</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Kevin</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Marcin</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Shihab</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Charalampos</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Addy</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Juan</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Mark</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">David</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Sukanya</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Chris</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Athena</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Kuo-Chieh</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Huasong</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Alessandro</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Stanley</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Iraj</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span><span class="name-pill"><span class="pill-name">Zach</span><button class="pill-weight" title="Edit weight" style="opacity: 0.4; pointer-events: none;">×1</button><button class="pill-remove" title="Remove">✕</button></span></div>
+    <div class="collapsible" id="sec-members">
+      <div class="name-grid" id="name-grid"></div>
       <div class="add-row">
-        <input type="text" id="new-name-input" placeholder="Add a name…" onkeydown="if(event.key==='Enter')addName()">
+        <input type="text" id="new-name-input" placeholder="Add a name…" onkeydown="if(event.key==='Enter')addName()" />
         <button onclick="addName()">Add</button>
         <button onclick="openBatchModal()">Batch edit</button>
       </div>
-      <div class="pool-status" id="pool-status">18 members in pool</div>
+      <div class="pool-status" id="pool-status"></div>
       <div class="weight-legend">
         <span>Tap weight badge to edit.</span>
         <span style="color:#c05a1a;">●</span><span>= high weight</span>
         <span style="color:var(--hint);">●</span><span>= low weight</span>
       </div>
-      <button class="export-btn" onclick="exportHTML()" title="Download this file with the current roster baked in">↓ Export updated file (share this)</button>
+      <button class="export-btn" onclick="exportHTML()">↓ Export updated file (share this)</button>
     </div>
   </div>
 
@@ -481,14 +382,14 @@
       <span class="section-label">Options</span>
       <span class="chevron open" id="chev-options">▼</span>
     </div>
-    <div class="collapsible" id="sec-options" style="max-height: 298px;">
+    <div class="collapsible" id="sec-options">
       <div class="toggle-row">
         <div class="toggle-info">
           <div class="tl">Without replacement</div>
           <div class="td">Each person drawn once per round</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="toggle-noreplace" onchange="saveState();updateUI()">
+          <input type="checkbox" id="toggle-noreplace" onchange="saveState();updateUI()" />
           <span class="toggle-track"></span>
         </label>
       </div>
@@ -498,7 +399,7 @@
           <div class="td">Higher weight = more likely to be picked</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="toggle-weighted" onchange="saveState();updateUI()">
+          <input type="checkbox" id="toggle-weighted" onchange="saveState();updateUI()" />
           <span class="toggle-track"></span>
         </label>
       </div>
@@ -511,8 +412,8 @@
       <span class="section-label">History</span>
       <span class="chevron open" id="chev-history">▼</span>
     </div>
-    <div class="collapsible" id="sec-history" style="max-height: 247px;">
-      <ul class="history-list" id="history-list"><li><span class="history-empty">No draws yet</span></li></ul>
+    <div class="collapsible" id="sec-history">
+      <ul class="history-list" id="history-list"></ul>
       <div class="history-footer">
         <button class="text-btn" onclick="clearHistory()">Clear history</button>
       </div>
@@ -520,79 +421,73 @@
   </div>
 </div>
 
-<!-- Batch edit modal -->
-<div class="modal-overlay" id="batch-modal-overlay" onclick="closeBatchModalOutside(event)">
+<!-- Batch modal -->
+<div class="modal-overlay" id="batch-modal-overlay" onclick="closeBatchOutside(event)">
   <div class="modal">
     <h2>Edit roster</h2>
     <p class="modal-sub">One name per line. Existing weights are preserved.</p>
-    <textarea class="batch-textarea" id="batch-textarea" placeholder="Kevin
-Marcin
-Pam
-Shihab
-Charalampos"></textarea>
+    <textarea class="batch-textarea" id="batch-textarea" placeholder="Kevin&#10;Marcin&#10;Pam&#10;Shihab&#10;Charalampos"></textarea>
     <p class="batch-note" id="batch-note"></p>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeBatchModal()">Cancel</button>
-      <button class="btn-save" onclick="applyBatch()">Apply</button>
+      <button class="btn-save"   onclick="applyBatch()">Apply</button>
     </div>
   </div>
 </div>
 
 <!-- Weight modal -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+<div class="modal-overlay" id="weight-modal-overlay" onclick="closeWeightOutside(event)">
   <div class="modal">
-    <h2 id="modal-title">Edit weight</h2>
+    <h2 id="weight-modal-title">Edit weight</h2>
     <p class="modal-sub">Higher weight = more likely to be drawn</p>
     <div class="weight-row">
-      <label id="modal-name-label">Name</label>
-      <input type="range" id="modal-slider" min="1" max="5" step="1" oninput="document.getElementById('modal-val').textContent=this.value">
-      <span class="weight-val" id="modal-val">1</span>
+      <label id="weight-modal-label">Name</label>
+      <input type="range" id="weight-slider" min="1" max="5" step="1"
+             oninput="document.getElementById('weight-val').textContent=this.value" />
+      <span class="weight-val" id="weight-val">1</span>
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-save" onclick="saveWeight()">Save</button>
+      <button class="btn-cancel" onclick="closeWeightModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveWeight()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'jc_draw_v2';
+const STORAGE_KEY = 'jc_draw_v3';
 
-// Baked-in roster — edit this list before sharing the file.
-// localStorage takes precedence on machines that have used the app before.
+// Baked-in roster — edit before sharing. localStorage wins on machines that have used the app before.
 const ROSTER = [
-  { name: "Andrew", weight: 1 },
-  { name: "Kevin", weight: 1 },
-  { name: "Marcin", weight: 1 },
-  { name: "Shihab", weight: 1 },
-  { name: "Charalampos", weight: 1 },
-  { name: "Addy", weight: 1 },
-  { name: "Juan", weight: 1 },
-  { name: "Mark", weight: 1 },
-  { name: "David", weight: 1 },
-  { name: "Sukanya", weight: 1 },
-  { name: "Chris", weight: 1 },
-  { name: "Athena", weight: 1 },
-  { name: "Kuo-Chieh", weight: 1 },
-  { name: "Huasong", weight: 1 },
-  { name: "Alessandro", weight: 1 },
-  { name: "Stanley", weight: 1 },
-  { name: "Iraj", weight: 1 },
-  { name: "Zach", weight: 1 },
+  { name: 'Kevin',        weight: 1 },
+  { name: 'Marcin',       weight: 1 },
+  { name: 'Pam',          weight: 1 },
+  { name: 'Shihab',       weight: 1 },
+  { name: 'Charalampos',  weight: 1 },
+];
+
+// Wheel slice colors [fill, text]
+const PALETTE = [
+  ['#3d5066','#f0ede6'], ['#b86e3a','#f7f3ec'], ['#3d6652','#ecf5ef'],
+  ['#6b4a6e','#f5eef5'], ['#3d6070','#eaf3f5'], ['#6b6040','#f5f2ea'],
+  ['#4a3d70','#eeeaf5'], ['#6b3d3d','#f5eaea'], ['#3d6b6b','#eaf5f5'],
+  ['#5c6b3d','#f2f5ea'],
 ];
 
 let state = {
-  names: ROSTER.map(r => r.name),
-  weights: Object.fromEntries(ROSTER.map(r => [r.name, r.weight])),
-  noReplace: false,
-  weighted: false,
+  names:          ROSTER.map(r => r.name),
+  weights:        Object.fromEntries(ROSTER.map(r => [r.name, r.weight])),
+  noReplace:      false,
+  weighted:       false,
   drawnThisRound: [],
-  history: [],
-  collapsed: {}
+  history:        [],
+  collapsed:      {},
+  view:           'text',
 };
 
-let modalTarget = null;
+let weightModalTarget = null;
 let isAnimating = false;
+let wheelAngle  = 0;
+let wheelAnim   = null;
 
 // ---- persistence ----
 function saveState() {
@@ -605,42 +500,181 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const saved = JSON.parse(raw);
-      state = Object.assign(state, saved);
-      if (!state.weights) state.weights = {};
-      if (!state.drawnThisRound) state.drawnThisRound = [];
-      if (!state.collapsed) state.collapsed = {};
+      const s = JSON.parse(raw);
+      state = Object.assign(state, s);
+      state.weights        = state.weights        || {};
+      state.drawnThisRound = state.drawnThisRound || [];
+      state.collapsed      = state.collapsed      || {};
+      state.view           = state.view           || 'text';
     }
-    // If localStorage has no names (fresh machine), fall back to baked ROSTER
     if (!state.names || state.names.length === 0) {
-      state.names = ROSTER.map(r => r.name);
+      state.names   = ROSTER.map(r => r.name);
       state.weights = Object.fromEntries(ROSTER.map(r => [r.name, r.weight]));
     }
   } catch(e) {}
-  // ensure weights exist for all names
   state.names.forEach(n => { if (!state.weights[n]) state.weights[n] = 1; });
   document.getElementById('toggle-noreplace').checked = !!state.noReplace;
   document.getElementById('toggle-weighted').checked  = !!state.weighted;
 }
 
-// ---- pool logic ----
+// ---- view ----
+function setView(v) {
+  state.view = v;
+  saveState();
+  document.getElementById('view-text').style.display  = v === 'text'  ? '' : 'none';
+  document.getElementById('view-wheel').style.display = v === 'wheel' ? '' : 'none';
+  document.getElementById('btn-view-text').classList.toggle('active',  v === 'text');
+  document.getElementById('btn-view-wheel').classList.toggle('active', v === 'wheel');
+  const btn = document.getElementById('draw-btn');
+  btn.textContent = v === 'wheel' ? 'Spin the wheel' : 'Draw a name';
+  if (v === 'wheel') requestAnimationFrame(() => paintWheel(wheelAngle));
+}
+
+// ---- pool ----
 function getPool() {
   const drawn = new Set(state.drawnThisRound);
-  if (!state.noReplace) return [...state.names];
-  return state.names.filter(n => !drawn.has(n));
+  return state.noReplace ? state.names.filter(n => !drawn.has(n)) : [...state.names];
 }
 
 function weightedSample(pool) {
-  if (!state.weighted) {
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  const totalWeight = pool.reduce((s, n) => s + (state.weights[n] || 1), 0);
-  let r = Math.random() * totalWeight;
-  for (const n of pool) {
-    r -= (state.weights[n] || 1);
-    if (r <= 0) return n;
-  }
+  if (!state.weighted) return pool[Math.floor(Math.random() * pool.length)];
+  const total = pool.reduce((s, n) => s + (state.weights[n] || 1), 0);
+  let r = Math.random() * total;
+  for (const n of pool) { r -= (state.weights[n] || 1); if (r <= 0) return n; }
   return pool[pool.length - 1];
+}
+
+// ---- wheel ----
+function getSlices(pool) {
+  const total = pool.reduce((s, n) => s + (state.weighted ? (state.weights[n] || 1) : 1), 0);
+  let a = 0;
+  return pool.map((name, i) => {
+    const w = state.weighted ? (state.weights[name] || 1) : 1;
+    const sweep = (w / total) * Math.PI * 2;
+    const s = { name, start: a, sweep, color: PALETTE[i % PALETTE.length] };
+    a += sweep;
+    return s;
+  });
+}
+
+function paintWheel(rotation) {
+  const canvas = document.getElementById('wheel-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2, R = W / 2 - 8;
+  const pool = getPool();
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (pool.length === 0) {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#888';
+    ctx.font = 'bold 32px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No names', cx, cy);
+    return;
+  }
+
+  const slices = getSlices(pool);
+
+  slices.forEach((sl, idx) => {
+    const sa = sl.start + rotation - Math.PI / 2;
+    const ea = sa + sl.sweep;
+
+    // slice fill
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, sa, ea);
+    ctx.closePath();
+    ctx.fillStyle = sl.color[0];
+    ctx.fill();
+
+    // divider line
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, sa, ea);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // label
+    if (sl.sweep > 0.08) {
+      const midA   = sa + sl.sweep / 2;
+      const labelR = R * 0.65;
+      const lx = cx + Math.cos(midA) * labelR;
+      const ly = cy + Math.sin(midA) * labelR;
+
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(midA + Math.PI / 2);
+
+      // clip long names to available arc
+      const arcLen     = sl.sweep * labelR;
+      const charWidth  = Math.max(9, Math.min(18, arcLen / 7));
+      const maxChars   = Math.max(3, Math.floor(arcLen / charWidth));
+      const label      = sl.name.length > maxChars
+        ? sl.name.slice(0, maxChars - 1) + '…'
+        : sl.name;
+
+      const fs = Math.max(11, Math.min(20, Math.floor(sl.sweep * R * 0.36)));
+      ctx.font      = `${fs}px Georgia, serif`;
+      ctx.fillStyle = sl.color[1];
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    }
+  });
+
+  // outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.20)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // center hub background (CSS overlay handles the text)
+  ctx.beginPath();
+  ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  ctx.fillStyle = isDark ? '#252523' : '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function spinTo(chosenName, pool, onDone) {
+  const slices  = getSlices(pool);
+  const chosen  = slices.find(s => s.name === chosenName);
+  if (!chosen) { onDone(); return; }
+
+  // We want the midpoint of the chosen slice to land under the top pointer.
+  // paintWheel offsets by -PI/2, so pointer is at rotation=0 → slice mid = 0.
+  // We need: chosen.start + chosen.sweep/2 + finalRotation ≡ 0 (mod 2π)
+  const sliceMid   = chosen.start + chosen.sweep / 2;
+  const baseTarget = (-sliceMid + Math.PI * 2 * 100) % (Math.PI * 2);
+  const extraSpins = (5 + Math.floor(Math.random() * 4)) * Math.PI * 2;
+  const targetAbs  = Math.floor(wheelAngle / (Math.PI * 2)) * Math.PI * 2 + baseTarget + extraSpins;
+
+  const startAngle = wheelAngle;
+  const delta      = targetAbs - startAngle;
+  const duration   = 3000 + Math.random() * 1000;
+  const t0         = performance.now();
+
+  function ease(t) { return 1 - Math.pow(1 - t, 3.5); }
+
+  if (wheelAnim) cancelAnimationFrame(wheelAnim);
+  function frame(now) {
+    const t  = Math.min(1, (now - t0) / duration);
+    wheelAngle = startAngle + delta * ease(t);
+    paintWheel(wheelAngle);
+    if (t < 1) { wheelAnim = requestAnimationFrame(frame); }
+    else        { wheelAngle = startAngle + delta; paintWheel(wheelAngle); onDone(); }
+  }
+  wheelAnim = requestAnimationFrame(frame);
 }
 
 // ---- draw ----
@@ -649,121 +683,149 @@ function draw() {
   let pool = getPool();
   if (pool.length === 0 && state.noReplace) {
     state.drawnThisRound = [];
-    saveState();
-    updateUI();
+    saveState(); updateUI();
     pool = getPool();
   }
   if (pool.length === 0) return;
 
-  isAnimating = true;
+  const chosen = weightedSample(pool);
+  isAnimating  = true;
   document.getElementById('draw-btn').disabled = true;
-  const nameEl = document.getElementById('result-name');
-  nameEl.classList.add('spinning');
 
-  let ticks = 0;
-  const maxTicks = 16;
-  const interval = setInterval(() => {
-    nameEl.textContent = pool[Math.floor(Math.random() * pool.length)];
-    ticks++;
-    if (ticks >= maxTicks) {
-      clearInterval(interval);
-      const chosen = weightedSample(pool);
-      nameEl.textContent = chosen;
-      nameEl.classList.remove('spinning');
-      const w = state.weights[chosen] || 1;
-      const wStr = state.weighted ? ` · weight ${w}` : '';
-      const roundStr = state.noReplace
-        ? `draw ${state.drawnThisRound.length + 1} of ${state.names.length}${wStr}`
-        : `drawn with replacement${wStr}`;
-      document.getElementById('result-meta').textContent = roundStr;
-      if (state.noReplace) state.drawnThisRound.push(chosen);
-      state.history.unshift({ name: chosen, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
-      if (state.history.length > 50) state.history.pop();
-      saveState();
-      isAnimating = false;
-      document.getElementById('draw-btn').disabled = false;
-      updateUI();
-    }
-  }, 55);
+  const w        = state.weights[chosen] || 1;
+  const wStr     = state.weighted ? ` · weight ${w}` : '';
+  const roundStr = state.noReplace
+    ? `draw ${state.drawnThisRound.length + 1} of ${state.names.length}${wStr}`
+    : `drawn with replacement${wStr}`;
+
+  if (state.view === 'wheel') {
+    document.getElementById('wheel-result').textContent = '';
+    spinTo(chosen, pool, () => {
+      document.getElementById('wheel-result').textContent = chosen + '  ·  ' + roundStr;
+      finish(chosen);
+    });
+  } else {
+    const el = document.getElementById('result-name');
+    el.classList.add('spinning');
+    let ticks = 0;
+    const iv = setInterval(() => {
+      el.textContent = pool[Math.floor(Math.random() * pool.length)];
+      if (++ticks >= 16) {
+        clearInterval(iv);
+        el.textContent = chosen;
+        el.classList.remove('spinning');
+        document.getElementById('result-meta').textContent = roundStr;
+        finish(chosen);
+      }
+    }, 55);
+  }
+}
+
+function finish(chosen) {
+  if (state.noReplace) state.drawnThisRound.push(chosen);
+  state.history.unshift({ name: chosen, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+  if (state.history.length > 50) state.history.pop();
+  saveState();
+  isAnimating = false;
+  document.getElementById('draw-btn').disabled = false;
+  updateUI();
 }
 
 // ---- members ----
 function addName() {
-  const input = document.getElementById('new-name-input');
-  const val = input.value.trim();
-  if (!val || state.names.includes(val)) { input.value = ''; return; }
+  const inp = document.getElementById('new-name-input');
+  const val = inp.value.trim();
+  if (!val || state.names.includes(val)) { inp.value = ''; return; }
   state.names.push(val);
   state.weights[val] = 1;
-  input.value = '';
-  saveState();
-  updateUI();
+  inp.value = '';
+  saveState(); updateUI();
 }
 
 function removeName(name) {
-  state.names = state.names.filter(n => n !== name);
-  delete state.weights[name];
+  state.names          = state.names.filter(n => n !== name);
   state.drawnThisRound = state.drawnThisRound.filter(n => n !== name);
-  saveState();
-  updateUI();
+  delete state.weights[name];
+  saveState(); updateUI();
 }
 
 // ---- weight modal ----
 function openWeightModal(name) {
-  modalTarget = name;
-  document.getElementById('modal-title').textContent = 'Edit weight — ' + name;
-  document.getElementById('modal-name-label').textContent = name;
+  weightModalTarget = name;
+  document.getElementById('weight-modal-title').textContent = 'Edit weight — ' + name;
+  document.getElementById('weight-modal-label').textContent = name;
   const w = state.weights[name] || 1;
-  document.getElementById('modal-slider').value = w;
-  document.getElementById('modal-val').textContent = w;
-  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('weight-slider').value = w;
+  document.getElementById('weight-val').textContent = w;
+  document.getElementById('weight-modal-overlay').classList.add('open');
 }
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  modalTarget = null;
+function closeWeightModal() {
+  document.getElementById('weight-modal-overlay').classList.remove('open');
+  weightModalTarget = null;
 }
-
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-
+function closeWeightOutside(e) { if (e.target === document.getElementById('weight-modal-overlay')) closeWeightModal(); }
 function saveWeight() {
-  if (!modalTarget) return;
-  state.weights[modalTarget] = parseInt(document.getElementById('modal-slider').value);
-  closeModal();
-  saveState();
-  updateUI();
+  if (!weightModalTarget) return;
+  state.weights[weightModalTarget] = parseInt(document.getElementById('weight-slider').value);
+  closeWeightModal(); saveState(); updateUI();
+}
+
+// ---- batch modal ----
+function openBatchModal() {
+  document.getElementById('batch-textarea').value = state.names.join('\n');
+  document.getElementById('batch-note').textContent = '';
+  document.getElementById('batch-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('batch-textarea').focus(), 50);
+}
+function closeBatchModal() { document.getElementById('batch-modal-overlay').classList.remove('open'); }
+function closeBatchOutside(e) { if (e.target === document.getElementById('batch-modal-overlay')) closeBatchModal(); }
+function applyBatch() {
+  const lines  = document.getElementById('batch-textarea').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const unique = [...new Set(lines)];
+  if (!unique.length) { document.getElementById('batch-note').textContent = 'Need at least one name.'; return; }
+  const newW = {};
+  unique.forEach(n => { newW[n] = state.weights[n] || 1; });
+  state.names          = unique;
+  state.weights        = newW;
+  state.drawnThisRound = state.drawnThisRound.filter(n => unique.includes(n));
+  closeBatchModal(); saveState(); updateUI();
 }
 
 // ---- history ----
 function clearHistory() {
-  state.history = [];
-  state.drawnThisRound = [];
+  state.history = []; state.drawnThisRound = [];
   document.getElementById('result-name').textContent = '—';
   document.getElementById('result-meta').textContent = 'press draw to begin';
-  saveState();
-  updateUI();
+  document.getElementById('wheel-result').textContent = '';
+  saveState(); updateUI();
 }
 
-// ---- collapsible sections ----
-function toggleSection(id) {
-  state.collapsed[id] = !state.collapsed[id];
-  saveState();
-  applySections();
+// ---- export ----
+function exportHTML() {
+  const rosterJS = state.names
+    .map(n => `  { name: ${JSON.stringify(n)}, weight: ${state.weights[n] || 1} },`)
+    .join('\n');
+  const src     = document.documentElement.outerHTML;
+  const updated = src.replace(/const ROSTER = \[[\s\S]*?\];/, `const ROSTER = [\n${rosterJS}\n];`);
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([updated], {type:'text/html'})),
+    download: 'journal_club.html',
+  });
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ---- collapsible ----
+function toggleSection(id) { state.collapsed[id] = !state.collapsed[id]; saveState(); applySections(); }
 function applySections() {
   ['members','options','history'].forEach(id => {
-    const sec  = document.getElementById('sec-' + id);
+    const sec  = document.getElementById('sec-'  + id);
     const chev = document.getElementById('chev-' + id);
-    const collapsed = state.collapsed[id];
-    if (collapsed) {
-      sec.style.maxHeight = '0';
-      sec.classList.add('closed');
-      chev.classList.remove('open');
+    if (state.collapsed[id]) {
+      sec.style.maxHeight = '0'; sec.classList.add('closed'); chev.classList.remove('open');
     } else {
       sec.classList.remove('closed');
-      sec.style.maxHeight = sec.scrollHeight + 200 + 'px';
+      sec.style.maxHeight = sec.scrollHeight + 300 + 'px';
       chev.classList.add('open');
     }
   });
@@ -771,163 +833,76 @@ function applySections() {
 
 // ---- render ----
 function updateUI() {
-  const grid = document.getElementById('name-grid');
-  grid.innerHTML = '';
+  // pills
+  const grid     = document.getElementById('name-grid');
   const drawnSet = new Set(state.drawnThisRound);
-
+  grid.innerHTML = '';
   state.names.forEach(name => {
     const isDrawn = state.noReplace && drawnSet.has(name);
-    const w = state.weights[name] || 1;
-    const wClass = w >= 4 ? 'high' : w <= 1 ? 'low' : '';
-    const wLabel = w === 1 ? '×1' : w === 2 ? '×2' : w === 3 ? '×3' : w === 4 ? '×4' : '×5';
+    const w       = state.weights[name] || 1;
+    const wLabel  = `×${w}`;
+    const wClass  = w >= 4 ? 'high' : w <= 1 ? 'low' : '';
 
     const pill = document.createElement('span');
     pill.className = 'name-pill' + (isDrawn ? ' drawn' : '');
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'pill-name';
-    nameSpan.textContent = name;
+    const ns = document.createElement('span');
+    ns.className = 'pill-name'; ns.textContent = name;
 
-    const weightBtn = document.createElement('button');
-    weightBtn.className = 'pill-weight' + (state.weighted ? (' ' + wClass) : '');
-    weightBtn.textContent = wLabel;
-    weightBtn.title = 'Edit weight';
-    weightBtn.onclick = () => openWeightModal(name);
-    if (!state.weighted) {
-      weightBtn.style.opacity = '0.4';
-      weightBtn.style.pointerEvents = 'none';
-    }
+    const wb = document.createElement('button');
+    wb.className   = 'pill-weight' + (state.weighted ? ' ' + wClass : '');
+    wb.textContent = wLabel;
+    wb.title       = 'Edit weight';
+    wb.onclick     = () => openWeightModal(name);
+    if (!state.weighted) { wb.style.opacity = '0.35'; wb.style.pointerEvents = 'none'; }
 
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'pill-remove';
-    removeBtn.innerHTML = '&#x2715;';
-    removeBtn.title = 'Remove';
-    removeBtn.onclick = () => removeName(name);
+    const rb = document.createElement('button');
+    rb.className   = 'pill-remove';
+    rb.innerHTML   = '&#x2715;';
+    rb.title       = 'Remove';
+    rb.onclick     = () => removeName(name);
 
-    pill.appendChild(nameSpan);
-    pill.appendChild(weightBtn);
-    pill.appendChild(removeBtn);
+    pill.append(ns, wb, rb);
     grid.appendChild(pill);
   });
 
   // pool status
   const pool = getPool();
-  const statusEl = document.getElementById('pool-status');
-  if (state.noReplace) {
-    statusEl.textContent = pool.length === 0
-      ? 'Round complete — click draw to reset round'
-      : `${pool.length} of ${state.names.length} remaining this round`;
-  } else {
-    statusEl.textContent = `${state.names.length} member${state.names.length !== 1 ? 's' : ''} in pool`;
-  }
+  document.getElementById('pool-status').textContent = state.noReplace
+    ? (pool.length === 0 ? 'Round complete — click draw to reset round' : `${pool.length} of ${state.names.length} remaining this round`)
+    : `${state.names.length} member${state.names.length !== 1 ? 's' : ''} in pool`;
 
   // draw button
   const btn = document.getElementById('draw-btn');
-  if (state.names.length === 0) {
-    btn.disabled = true;
-    btn.textContent = 'Add names to draw';
-  } else if (state.noReplace && pool.length === 0) {
-    btn.disabled = false;
-    btn.textContent = 'Reset round & draw again';
-  } else {
-    btn.disabled = false;
-    btn.textContent = 'Draw a name';
-  }
+  if (state.names.length === 0)            { btn.disabled = true;  btn.textContent = 'Add names to draw'; }
+  else if (state.noReplace && !pool.length){ btn.disabled = false; btn.textContent = 'Reset round & draw again'; }
+  else                                     { btn.disabled = false; btn.textContent = state.view === 'wheel' ? 'Spin the wheel' : 'Draw a name'; }
 
   // history
   const histEl = document.getElementById('history-list');
-  if (state.history.length === 0) {
-    histEl.innerHTML = '<li><span class="history-empty">No draws yet</span></li>';
-  } else {
-    histEl.innerHTML = state.history.map((e, i) =>
-      `<li>
-        <span class="h-num">${i + 1}</span>
-        <span class="h-name">${e.name}</span>
-        <span class="h-time">${e.time || ''}</span>
-      </li>`
-    ).join('');
-  }
+  histEl.innerHTML = state.history.length === 0
+    ? '<li><span class="history-empty">No draws yet</span></li>'
+    : state.history.map((e,i) =>
+        `<li><span class="h-num">${i+1}</span><span class="h-name">${e.name}</span><span class="h-time">${e.time||''}</span></li>`
+      ).join('');
 
-  // header subtitle
+  // subtitle
   document.getElementById('header-sub').textContent =
     (state.noReplace ? 'without replacement' : 'with replacement') +
-    (state.weighted ? ' · weighted' : '');
+    (state.weighted  ? ' · weighted' : '');
 
+  if (state.view === 'wheel') paintWheel(wheelAngle);
   applySections();
 }
 
-// ---- batch edit ----
-function openBatchModal() {
-  document.getElementById('batch-textarea').value = state.names.join('\n');
-  document.getElementById('batch-note').textContent = '';
-  document.getElementById('batch-modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('batch-textarea').focus(), 50);
-}
-
-function closeBatchModal() {
-  document.getElementById('batch-modal-overlay').classList.remove('open');
-}
-
-function closeBatchModalOutside(e) {
-  if (e.target === document.getElementById('batch-modal-overlay')) closeBatchModal();
-}
-
-function applyBatch() {
-  const lines = document.getElementById('batch-textarea').value
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0);
-  const unique = [...new Set(lines)];
-  if (unique.length === 0) {
-    document.getElementById('batch-note').textContent = 'Need at least one name.';
-    return;
-  }
-  // preserve weights for existing names; new names default to 1
-  const newWeights = {};
-  unique.forEach(n => { newWeights[n] = state.weights[n] || 1; });
-  state.names = unique;
-  state.weights = newWeights;
-  state.drawnThisRound = state.drawnThisRound.filter(n => unique.includes(n));
-  closeBatchModal();
-  saveState();
-  updateUI();
-}
-
-// ---- export updated HTML ----
-function exportHTML() {
-  // Build a serialized ROSTER from current state
-  const rosterJS = state.names
-    .map(n => `  { name: ${JSON.stringify(n)}, weight: ${state.weights[n] || 1} },`)
-    .join('\n');
-  const newRosterBlock =
-    `const ROSTER = [\n${rosterJS}\n];`;
-
-  // Get current page source and replace the ROSTER block
-  const src = document.documentElement.outerHTML;
-  const updated = src.replace(
-    /const ROSTER = \[[\s\S]*?\];/,
-    newRosterBlock
-  );
-
-  const blob = new Blob([updated], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'journal_club.html';
-  a.click();
-  URL.revokeObjectURL(url);
-}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (state.view === 'wheel') paintWheel(wheelAngle);
+});
 
 // ---- init ----
 loadState();
+setView(state.view || 'text');
 updateUI();
 </script>
-
-
-</body><style class="stylus">/* can import but if the font already exists on your system, this line is not needed */
-/* @import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@450&display=swap"); */
-
-pre, code, .blob-code, .blob-code-marker {
-  font-family: 'Iosevka Custom Condensed', monospace !important;
-  font-size: 18px !important;
-}</style></html>
+</body>
+</html>
